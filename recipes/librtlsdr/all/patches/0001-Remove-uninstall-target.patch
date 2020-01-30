@@ -1,0 +1,221 @@
+From d10debf0f8d64674314322a5f87a4ff2eca7313c Mon Sep 17 00:00:00 2001
+From: Brennan Ashton <bashton@brennanashton.com>
+Date: Thu, 30 Jan 2020 11:20:06 -0800
+Subject: [PATCH] Remove uninstall target
+
+Signed-off-by: Brennan Ashton <bashton@brennanashton.com>
+---
+ CMakeLists.txt     | 53 ++--------------------------------------------
+ src/CMakeLists.txt | 53 +++++++++++++++++++++++-----------------------
+ 2 files changed, 29 insertions(+), 77 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b5ddfaa..8998ca6 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -31,7 +31,7 @@ if(NOT CMAKE_BUILD_TYPE)
+ endif(NOT CMAKE_BUILD_TYPE)
+ set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "")
+ 
+-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
++list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+ 
+ if(NOT LIB_INSTALL_DIR)
+    set(LIB_INSTALL_DIR lib)
+@@ -63,7 +63,6 @@ endif()
+ ########################################################################
+ # Find build dependencies
+ ########################################################################
+-find_package(PkgConfig)
+ find_package(LibUSB)
+ if(WIN32 AND NOT MINGW)
+     set(THREADS_USE_PTHREADS_WIN32 true)
+@@ -80,7 +79,7 @@ endif()
+ # Setup the include and linker paths
+ ########################################################################
+ include_directories(
+-    ${CMAKE_SOURCE_DIR}/include
++    ${PROJECT_SOURCE_DIR}/include
+     ${LIBUSB_INCLUDE_DIR}
+     ${THREADS_PTHREADS_INCLUDE_DIR}
+ )
+@@ -92,18 +91,6 @@ include_directories(
+ # Set component parameters
+ #set(INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE INTERNAL "" FORCE)
+ 
+-########################################################################
+-# Create uninstall target
+-########################################################################
+-configure_file(
+-    ${CMAKE_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in
+-    ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
+-@ONLY)
+-
+-add_custom_target(uninstall
+-    ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
+-)
+-
+ ########################################################################
+ # Install udev rules
+ ########################################################################
+@@ -132,42 +119,6 @@ endif (DETACH_KERNEL_DRIVER)
+ add_subdirectory(include)
+ add_subdirectory(src)
+ 
+-########################################################################
+-# Create Pkg Config File
+-########################################################################
+-FOREACH(inc ${LIBUSB_INCLUDE_DIR})
+-    LIST(APPEND RTLSDR_PC_CFLAGS "-I${inc}")
+-ENDFOREACH(inc)
+-
+-FOREACH(lib ${LIBUSB_LIBRARY_DIRS})
+-    LIST(APPEND RTLSDR_PC_LIBS "-L${lib}")
+-ENDFOREACH(lib)
+-
+-# use space-separation format for the pc file
+-STRING(REPLACE ";" " " RTLSDR_PC_CFLAGS "${RTLSDR_PC_CFLAGS}")
+-STRING(REPLACE ";" " " RTLSDR_PC_LIBS "${RTLSDR_PC_LIBS}")
+-
+-# unset these vars to avoid hard-coded paths to cross environment
+-IF(CMAKE_CROSSCOMPILING)
+-    UNSET(RTLSDR_PC_CFLAGS)
+-    UNSET(RTLSDR_PC_LIBS)
+-ENDIF(CMAKE_CROSSCOMPILING)
+-
+-set(prefix ${CMAKE_INSTALL_PREFIX})
+-set(exec_prefix \${prefix})
+-set(libdir \${exec_prefix}/${LIB_INSTALL_DIR})
+-set(includedir \${prefix}/include)
+-
+-CONFIGURE_FILE(
+-    ${CMAKE_CURRENT_SOURCE_DIR}/librtlsdr.pc.in
+-    ${CMAKE_CURRENT_BINARY_DIR}/librtlsdr.pc
+-@ONLY)
+-
+-INSTALL(
+-    FILES ${CMAKE_CURRENT_BINARY_DIR}/librtlsdr.pc
+-    DESTINATION ${LIB_INSTALL_DIR}/pkgconfig
+-)
+-
+ ########################################################################
+ # Print Summary
+ ########################################################################
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 07d64ab..704b1aa 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -34,21 +34,14 @@ RTLSDR_APPEND_SRCS(
+ # Set up Windows DLL resource files
+ ########################################################################
+ IF(MSVC)
+-    include(${CMAKE_SOURCE_DIR}/cmake/Modules/Version.cmake)
+-
+-    configure_file(
+-        ${CMAKE_CURRENT_SOURCE_DIR}/rtlsdr.rc.in
+-        ${CMAKE_CURRENT_BINARY_DIR}/rtlsdr.rc
+-    @ONLY)
+-
+-    RTLSDR_APPEND_SRCS(${CMAKE_CURRENT_BINARY_DIR}/rtlsdr.rc)
++    include(${PROJECT_SOURCE_DIR}/cmake/Modules/Version.cmake)
+ ENDIF(MSVC)
+ 
+ ########################################################################
+ # Setup shared library variant
+ ########################################################################
+ add_library(rtlsdr_shared SHARED ${rtlsdr_srcs})
+-target_link_libraries(rtlsdr_shared ${LIBUSB_LIBRARIES})
++target_link_libraries(rtlsdr_shared CONAN_PKG::libusb)
+ set_target_properties(rtlsdr_shared PROPERTIES DEFINE_SYMBOL "rtlsdr_EXPORTS")
+ set_target_properties(rtlsdr_shared PROPERTIES OUTPUT_NAME rtlsdr)
+ set_target_properties(rtlsdr_shared PROPERTIES SOVERSION ${MAJOR_VERSION})
+@@ -58,7 +51,7 @@ set_target_properties(rtlsdr_shared PROPERTIES VERSION ${LIBVER})
+ # Setup static library variant
+ ########################################################################
+ add_library(rtlsdr_static STATIC ${rtlsdr_srcs})
+-target_link_libraries(rtlsdr_static ${LIBUSB_LIBRARIES})
++target_link_libraries(rtlsdr_static CONAN_PKG::libusb)
+ set_property(TARGET rtlsdr_static APPEND PROPERTY COMPILE_DEFINITIONS "rtlsdr_STATIC" )
+ if(NOT WIN32)
+ # Force same library filename for static and shared variants of the library
+@@ -91,34 +84,40 @@ add_executable(rtl_fm rtl_fm.c)
+ add_executable(rtl_eeprom rtl_eeprom.c)
+ add_executable(rtl_adsb rtl_adsb.c)
+ add_executable(rtl_power rtl_power.c)
+-set(INSTALL_TARGETS rtlsdr_shared rtlsdr_static rtl_sdr rtl_tcp rtl_test rtl_fm rtl_eeprom rtl_adsb rtl_power)
++set(INSTALL_BIN_TARGETS rtl_sdr rtl_tcp rtl_test rtl_fm rtl_eeprom rtl_adsb rtl_power)
++if(BUILD_SHARED_LIBS)
++  set(RTLSDR_LIB rtlsdr_shared)
++else(BUILD_SHARED_LIBS)
++  set(RTLSDR_LIB rtlsdr_static)
++endif(BUILD_SHARED_LIBS)
++set(INSTALL_TARGETS ${RTLSDR_LIB} ${INSTALL_BIN_TARGETS})
+ 
+-target_link_libraries(rtl_sdr rtlsdr_shared convenience_static
+-    ${LIBUSB_LIBRARIES}
++target_link_libraries(rtl_sdr ${RTLSDR_LIB} convenience_static
++    CONAN_PKG::libusb
+     ${CMAKE_THREAD_LIBS_INIT}
+ )
+-target_link_libraries(rtl_tcp rtlsdr_shared convenience_static
+-    ${LIBUSB_LIBRARIES}
++target_link_libraries(rtl_tcp ${RTLSDR_LIB} convenience_static
++    CONAN_PKG::libusb
+     ${CMAKE_THREAD_LIBS_INIT}
+ )
+-target_link_libraries(rtl_test rtlsdr_shared convenience_static
+-    ${LIBUSB_LIBRARIES}
++target_link_libraries(rtl_test ${RTLSDR_LIB} convenience_static
++    CONAN_PKG::libusb
+     ${CMAKE_THREAD_LIBS_INIT}
+ )
+-target_link_libraries(rtl_fm rtlsdr_shared convenience_static
+-    ${LIBUSB_LIBRARIES}
++target_link_libraries(rtl_fm ${RTLSDR_LIB} convenience_static
++    CONAN_PKG::libusb
+     ${CMAKE_THREAD_LIBS_INIT}
+ )
+-target_link_libraries(rtl_eeprom rtlsdr_shared convenience_static
+-    ${LIBUSB_LIBRARIES}
++target_link_libraries(rtl_eeprom ${RTLSDR_LIB} convenience_static
++    CONAN_PKG::libusb
+     ${CMAKE_THREAD_LIBS_INIT}
+ )
+-target_link_libraries(rtl_adsb rtlsdr_shared convenience_static
+-    ${LIBUSB_LIBRARIES}
++target_link_libraries(rtl_adsb ${RTLSDR_LIB} convenience_static
++    CONAN_PKG::libusb
+     ${CMAKE_THREAD_LIBS_INIT}
+ )
+-target_link_libraries(rtl_power rtlsdr_shared convenience_static
+-    ${LIBUSB_LIBRARIES}
++target_link_libraries(rtl_power ${RTLSDR_LIB} convenience_static
++    CONAN_PKG::libusb
+     ${CMAKE_THREAD_LIBS_INIT}
+ )
+ if(UNIX)
+@@ -140,6 +139,7 @@ target_link_libraries(rtl_fm libgetopt_static)
+ target_link_libraries(rtl_eeprom libgetopt_static)
+ target_link_libraries(rtl_adsb libgetopt_static)
+ target_link_libraries(rtl_power libgetopt_static)
++if(!BUILD_SHARED_LIBS)
+ set_property(TARGET rtl_sdr APPEND PROPERTY COMPILE_DEFINITIONS "rtlsdr_STATIC" )
+ set_property(TARGET rtl_tcp APPEND PROPERTY COMPILE_DEFINITIONS "rtlsdr_STATIC" )
+ set_property(TARGET rtl_test APPEND PROPERTY COMPILE_DEFINITIONS "rtlsdr_STATIC" )
+@@ -148,11 +148,12 @@ set_property(TARGET rtl_eeprom APPEND PROPERTY COMPILE_DEFINITIONS "rtlsdr_STATI
+ set_property(TARGET rtl_adsb APPEND PROPERTY COMPILE_DEFINITIONS "rtlsdr_STATIC" )
+ set_property(TARGET rtl_power APPEND PROPERTY COMPILE_DEFINITIONS "rtlsdr_STATIC" )
+ endif()
++endif()
+ ########################################################################
+ # Install built library files & utilities
+ ########################################################################
+ install(TARGETS ${INSTALL_TARGETS}
+     LIBRARY DESTINATION ${LIB_INSTALL_DIR} # .so/.dylib file
+     ARCHIVE DESTINATION ${LIB_INSTALL_DIR} # .lib file
+-    RUNTIME DESTINATION bin              # .dll file
++    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+ )
+-- 
+2.20.1
+

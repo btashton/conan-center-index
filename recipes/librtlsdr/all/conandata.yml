@@ -1,0 +1,9 @@
+sources:
+  "0.6.0":
+    url: https://github.com/osmocom/rtl-sdr/archive/0.6.0.tar.gz
+    sha256: ee10a76fe0c6601102367d4cdf5c26271e9442d0491aa8df27e5a9bf639cff7c
+
+patches:
+  "0.6.0":
+    patch_file: "patches/0001-Remove-uninstall-target.patch"
+    base_path: "source_subfolder"
