@@ -1,0 +1,276 @@
+From 06733635acae0d3d669155a22a726b959ba06b8b Mon Sep 17 00:00:00 2001
+From: Brennan Ashton <bashton@brennanashton.com>
+Date: Thu, 30 Jan 2020 17:51:45 -0800
+Subject: [PATCH 3/3] conan library lookup
+
+---
+ CMakeLists.txt                 |  1 +
+ src/decoder/CMakeLists.txt     |  4 ++--
+ src/goesemwin/CMakeLists.txt   |  2 +-
+ src/goeslrit/CMakeLists.txt    |  2 +-
+ src/goespackets/CMakeLists.txt |  2 +-
+ src/goesproc/CMakeLists.txt    | 28 +++++++++++++++-------------
+ src/goesproc/config.cc         |  2 +-
+ src/goesproc/proj.h            |  3 ++-
+ src/goesrecv/CMakeLists.txt    | 23 +++++++++++------------
+ src/lib/CMakeLists.txt         |  4 ++--
+ src/lrit/CMakeLists.txt        |  2 +-
+ 11 files changed, 38 insertions(+), 35 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1e4c175..0fc2934 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -52,6 +52,7 @@ endif()
+ 
+ include_directories(BEFORE SYSTEM ${PROJECT_BINARY_DIR}/include)
+ include_directories(${PROJECT_SOURCE_DIR}/src)
++include_directories(${tinytoml_INCLUDE_DIRS})
+ 
+ add_subdirectory(src/util)
+ add_subdirectory(src/lib)
+diff --git a/src/decoder/CMakeLists.txt b/src/decoder/CMakeLists.txt
+index ba7ad1f..35f0239 100644
+--- a/src/decoder/CMakeLists.txt
++++ b/src/decoder/CMakeLists.txt
+@@ -1,5 +1,5 @@
+ add_executable(compute_sync_words compute_sync_words.cc)
+-target_link_libraries(compute_sync_words correct_static m stdc++)
++target_link_libraries(compute_sync_words CONAN_PKG::libcorrect m stdc++)
+ 
+ add_library(packetizer
+   correlator.cc
+@@ -8,7 +8,7 @@ add_library(packetizer
+   reader.cc
+   reed_solomon.cc
+   )
+-target_link_libraries(packetizer correct_static)
++target_link_libraries(packetizer CONAN_PKG::libcorrect)
+ 
+ add_executable(packetdump packetdump.cc)
+ target_link_libraries(packetdump packetizer m stdc++)
+diff --git a/src/goesemwin/CMakeLists.txt b/src/goesemwin/CMakeLists.txt
+index 1ce4617..a7dcdc2 100644
+--- a/src/goesemwin/CMakeLists.txt
++++ b/src/goesemwin/CMakeLists.txt
+@@ -2,7 +2,7 @@ add_executable(goesemwin goesemwin.cc options.cc qbt.cc emwin.cc)
+ install(TARGETS goesemwin COMPONENT goestools RUNTIME DESTINATION bin)
+ target_link_libraries(goesemwin assembler)
+ target_link_libraries(goesemwin m)
+-target_link_libraries(goesemwin nanomsg)
++target_link_libraries(goesemwin CONAN_PKG::nanomsg)
+ target_link_libraries(goesemwin packet_reader)
+ target_link_libraries(goesemwin stdc++)
+ target_link_libraries(goesemwin util)
+diff --git a/src/goeslrit/CMakeLists.txt b/src/goeslrit/CMakeLists.txt
+index 91dbf21..456c4ff 100644
+--- a/src/goeslrit/CMakeLists.txt
++++ b/src/goeslrit/CMakeLists.txt
+@@ -1,4 +1,4 @@
+ add_executable(goeslrit goeslrit.cc options.cc)
+ install(TARGETS goeslrit COMPONENT goestools RUNTIME DESTINATION bin)
+-target_link_libraries(goeslrit assembler nanomsg packet_reader util m stdc++)
++target_link_libraries(goeslrit assembler CONAN_PKG::nanomsg packet_reader util m stdc++)
+ target_link_libraries(goeslrit version)
+diff --git a/src/goespackets/CMakeLists.txt b/src/goespackets/CMakeLists.txt
+index aaf54a1..9ccdd7e 100644
+--- a/src/goespackets/CMakeLists.txt
++++ b/src/goespackets/CMakeLists.txt
+@@ -1,4 +1,4 @@
+ add_executable(goespackets goespackets.cc options.cc)
+ install(TARGETS goespackets COMPONENT goestools RUNTIME DESTINATION bin)
+-target_link_libraries(goespackets nanomsg packet_reader packet_writer util m stdc++)
++target_link_libraries(goespackets CONAN_PKG::nanomsg packet_reader packet_writer util m stdc++)
+ target_link_libraries(goespackets version)
+diff --git a/src/goesproc/CMakeLists.txt b/src/goesproc/CMakeLists.txt
+index 33f560b..7546fc4 100644
+--- a/src/goesproc/CMakeLists.txt
++++ b/src/goesproc/CMakeLists.txt
+@@ -19,11 +19,10 @@ set(GOESPROC_SRCS
+   string.cc
+   )
+ 
+-find_package(PkgConfig)
+-pkg_check_modules(OPENCV REQUIRED opencv)
+-pkg_check_modules(PROJ proj)
++find_package(opencv)
++find_package(proj)
+ 
+-if(PROJ_FOUND)
++if(proj_FOUND)
+   list(APPEND GOESPROC_SRCS proj.cc map_drawer.cc)
+ endif()
+ 
+@@ -31,19 +30,22 @@ add_executable(goesproc ${GOESPROC_SRCS})
+ install(TARGETS goesproc COMPONENT goestools RUNTIME DESTINATION bin)
+ target_link_libraries(goesproc lrit util assembler packet_reader dir)
+ target_link_libraries(goesproc zip)
+-target_link_libraries(goesproc nlohmann_json)
++target_link_libraries(goesproc CONAN_PKG::nlohmann_json)
++target_link_libraries(goesproc CONAN_PKG::tinytoml)
+ target_link_libraries(goesproc timer)
+ target_link_libraries(goesproc version)
+ 
+-if(OPENCV_FOUND)
+-  target_link_libraries(goesproc opencv_core opencv_highgui opencv_imgproc)
+-  if(${OPENCV_VERSION} VERSION_GREATER 3.0)
+-    target_link_libraries(goesproc opencv_imgcodecs)
+-  endif()
++if(opencv_FOUND)
++  target_link_libraries(goesproc CONAN_PKG::opencv)
++  #target_link_libraries(goesproc opencv_core opencv_highgui opencv_imgproc)
++  #if(${opencv_VERSION} VERSION_GREATER 3.0)
++  #  target_link_libraries(goesproc opencv_imgcodecs)
++  #  target_link_libraries(goesproc opencv_imgcodecs)
++  #endif()
+ endif()
+ 
+-if(PROJ_FOUND)
+-  string(REPLACE "." ";" PROJ_VERSION_LIST ${PROJ_VERSION})
++if(proj_FOUND)
++  string(REPLACE "." ";" PROJ_VERSION_LIST ${proj_VERSION})
+   list(GET PROJ_VERSION_LIST 0 PROJ_VERSION_MAJOR)
+   list(GET PROJ_VERSION_LIST 1 PROJ_VERSION_MINOR)
+   list(GET PROJ_VERSION_LIST 2 PROJ_VERSION_PATCH)
+@@ -52,5 +54,5 @@ if(PROJ_FOUND)
+     PROJ_VERSION_MINOR=${PROJ_VERSION_MINOR}
+     PROJ_VERSION_PATCH=${PROJ_VERSION_PATCH})
+   target_compile_definitions(goesproc PRIVATE HAS_PROJ)
+-  target_link_libraries(goesproc proj)
++  target_link_libraries(goesproc CONAN_PKG::proj)
+ endif()
+diff --git a/src/goesproc/config.cc b/src/goesproc/config.cc
+index 40e31e2..303d61f 100644
+--- a/src/goesproc/config.cc
++++ b/src/goesproc/config.cc
+@@ -207,7 +207,7 @@ bool loadHandlers(const toml::Value& v, Config& out) {
+       for (const auto& it : trs) {
+         auto channel = toUpper(it.first);
+         auto path = it.second.get<std::string>("path");
+-        auto img = cv::imread(path, CV_LOAD_IMAGE_UNCHANGED);
++        auto img = cv::imread(path, cv::IMREAD_UNCHANGED);
+         if (!img.data) {
+           out.ok = false;
+           out.error = "Unable to load image at: " + path;
+diff --git a/src/goesproc/proj.h b/src/goesproc/proj.h
+index 6bbe7fc..fc34afb 100644
+--- a/src/goesproc/proj.h
++++ b/src/goesproc/proj.h
+@@ -1,6 +1,6 @@
+ #pragma once
+ 
+-#if PROJ_VERSION_MAJOR < 4 || PROJ_VERSION_MAJOR > 5
++#if PROJ_VERSION_MAJOR < 4 || PROJ_VERSION_MAJOR > 6
+ #error "proj version 4 or 5 required"
+ #endif
+ 
+@@ -9,6 +9,7 @@
+ #include <tuple>
+ #include <vector>
+ 
++#define ACCEPT_USE_OF_DEPRECATED_PROJ_API_H 1
+ #include <proj_api.h>
+ 
+ class Proj {
+diff --git a/src/goesrecv/CMakeLists.txt b/src/goesrecv/CMakeLists.txt
+index b8a0934..c029fcc 100644
+--- a/src/goesrecv/CMakeLists.txt
++++ b/src/goesrecv/CMakeLists.txt
+@@ -1,5 +1,3 @@
+-find_package(PkgConfig)
+-
+ add_library(publisher
+   packet_publisher.cc
+   publisher.cc
+@@ -7,18 +5,19 @@ add_library(publisher
+   soft_bit_publisher.cc
+   stats_publisher.cc
+   )
+-target_link_libraries(publisher nanomsg)
++target_link_libraries(publisher CONAN_PKG::nanomsg)
++target_link_libraries(publisher CONAN_PKG::tinytoml)
+ 
+-pkg_check_modules(AIRSPY libairspy)
+-if(NOT AIRSPY_FOUND)
++find_package(libairspy)
++if(NOT libairspy_FOUND)
+   message(WARNING "Unable to find libairspy")
+ else()
+   add_library(airspy_source airspy_source.cc)
+   target_link_libraries(airspy_source ${AIRSPY_LIBRARIES} publisher stdc++)
+ endif()
+ 
+-pkg_check_modules(RTLSDR librtlsdr)
+-if(NOT RTLSDR_FOUND)
++find_package(librtlsdr)
++if(NOT librtlsdr_FOUND)
+   message(WARNING "Unable to find librtlsdr")
+ else()
+   add_library(rtlsdr_source rtlsdr_source.cc)
+@@ -26,11 +25,11 @@ else()
+      (RTLSDR_VERSION VERSION_GREATER 0.5.4))
+     target_compile_definitions(rtlsdr_source PRIVATE RTLSDR_HAS_BIAS_TEE)
+   endif()
+-  target_link_libraries(rtlsdr_source ${RTLSDR_LIBRARIES} publisher stdc++)
++  target_link_libraries(rtlsdr_source CONAN_PKG::librtlsdr publisher stdc++)
+ endif()
+ 
+ add_library(nanomsg_source nanomsg_source.cc)
+-target_link_libraries(nanomsg_source nanomsg publisher stdc++)
++target_link_libraries(nanomsg_source CONAN_PKG::nanomsg publisher stdc++)
+ 
+ add_library(agc agc.cc)
+ target_link_libraries(agc publisher m stdc++)
+@@ -51,7 +50,7 @@ add_executable(goesrecv goesrecv.cc config.cc options.cc decoder.cc demodulator.
+ install(TARGETS goesrecv COMPONENT goestools RUNTIME DESTINATION bin)
+ target_include_directories(goesrecv PRIVATE ${PROJECT_SOURCE_DIR}/src)
+ target_link_libraries(goesrecv util)
+-target_link_libraries(goesrecv nlohmann_json)
++target_link_libraries(goesrecv CONAN_PKG::nlohmann_json)
+ target_link_libraries(goesrecv packetizer pthread)
+ target_link_libraries(goesrecv agc)
+ target_link_libraries(goesrecv rrc)
+@@ -60,11 +59,11 @@ target_link_libraries(goesrecv clock_recovery)
+ target_link_libraries(goesrecv quantize)
+ target_link_libraries(goesrecv nanomsg_source)
+ target_link_libraries(goesrecv version)
+-if(AIRSPY_FOUND)
++if(airspy_FOUND)
+   target_compile_definitions(goesrecv PUBLIC -DBUILD_AIRSPY)
+   target_link_libraries(goesrecv airspy_source)
+ endif()
+-if(RTLSDR_FOUND)
++if(rtlsdr_FOUND)
+   target_compile_definitions(goesrecv PUBLIC -DBUILD_RTLSDR)
+   target_link_libraries(goesrecv rtlsdr_source)
+ endif()
+diff --git a/src/lib/CMakeLists.txt b/src/lib/CMakeLists.txt
+index 457155e..3103a85 100644
+--- a/src/lib/CMakeLists.txt
++++ b/src/lib/CMakeLists.txt
+@@ -3,9 +3,9 @@ add_library(zip zip.cc)
+ add_library(timer timer.cc)
+ target_link_libraries(zip z)
+ add_library(packet_reader packet_reader.cc nanomsg_reader.cc file_reader.cc)
+-target_link_libraries(packet_reader nanomsg)
++target_link_libraries(packet_reader CONAN_PKG::nanomsg)
+ add_library(packet_writer packet_writer.cc nanomsg_writer.cc file_writer.cc)
+-target_link_libraries(packet_writer nanomsg)
++target_link_libraries(packet_writer CONAN_PKG::nanomsg)
+ add_executable(unzip unzip.cc)
+ target_link_libraries(unzip zip m stdc++)
+ 
+diff --git a/src/lrit/CMakeLists.txt b/src/lrit/CMakeLists.txt
+index 945d415..9ab69fd 100644
+--- a/src/lrit/CMakeLists.txt
++++ b/src/lrit/CMakeLists.txt
+@@ -1,5 +1,5 @@
+ add_library(lrit lrit.cc file.cc json.cc)
+-target_link_libraries(lrit util nlohmann_json)
++target_link_libraries(lrit util CONAN_PKG::nlohmann_json)
+ 
+ add_executable(lritdump lritdump.cc)
+ target_link_libraries(lritdump lrit m stdc++)
+-- 
+2.20.1
+

@@ -1,0 +1,58 @@
+From 4c225676ee55a7e9e6206b9e770017a3365321b0 Mon Sep 17 00:00:00 2001
+From: Brennan Ashton <bashton@brennanashton.com>
+Date: Thu, 30 Jan 2020 17:36:02 -0800
+Subject: [PATCH 2/3] Remove vendored code
+
+---
+ CMakeLists.txt | 27 ---------------------------
+ 1 file changed, 27 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 528ab74..1e4c175 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -32,9 +32,6 @@ if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^arm")
+   endif()
+ endif()
+ 
+-# Force static build of libaec
+-set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "" FORCE)
+-
+ # Set a default build type if none was specified
+ set(default_build_type "RelWithDebInfo")
+ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+@@ -53,31 +50,7 @@ if("${CMAKE_BUILD_TYPE}" EQUAL "Release")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+ endif()
+ 
+-add_subdirectory(vendor/libcorrect EXCLUDE_FROM_ALL)
+-add_subdirectory(vendor/libaec EXCLUDE_FROM_ALL)
+-add_subdirectory(vendor/json EXCLUDE_FROM_ALL)
+-
+-# Build nanomsg
+-option(NN_STATIC_LIB "Build nanomsg as static library." ON)
+-option(NN_ENABLE_DOC "Build nanomsg documentation." OFF)
+-option(NN_TESTS "Build nanomsg tests" OFF)
+-option(NN_TOOLS "Build nanomsg tools" OFF)
+-add_subdirectory(vendor/nanomsg EXCLUDE_FROM_ALL)
+-
+-# Symlink vendor/nanomsg/src such that we can still use the "nanomsg"
+-# include path and not conflict with system includes (e.g. protocol.h).
+-execute_process(COMMAND
+-  ${CMAKE_COMMAND} -E make_directory
+-  ${PROJECT_BINARY_DIR}/include)
+-execute_process(COMMAND
+-  ${CMAKE_COMMAND} -E create_symlink
+-  ${PROJECT_SOURCE_DIR}/vendor/nanomsg/src
+-  ${PROJECT_BINARY_DIR}/include/nanomsg)
+-
+ include_directories(BEFORE SYSTEM ${PROJECT_BINARY_DIR}/include)
+-include_directories(BEFORE SYSTEM ${PROJECT_SOURCE_DIR}/vendor/libcorrect/include)
+-include_directories(BEFORE SYSTEM ${PROJECT_SOURCE_DIR}/vendor/libaec/src)
+-include_directories(BEFORE SYSTEM ${PROJECT_SOURCE_DIR}/vendor/tinytoml/include)
+ include_directories(${PROJECT_SOURCE_DIR}/src)
+ 
+ add_subdirectory(src/util)
+-- 
+2.20.1
+
